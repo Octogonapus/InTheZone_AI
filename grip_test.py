@@ -1,5 +1,4 @@
 import cv2
-from networktables import NetworkTables
 import numpy as np
 from cone_pipeline import ConePipeline
 from red_mobile_goal_pipeline import RedMobileGoalPipeline
@@ -20,12 +19,6 @@ def extra_processing_cones(pipeline):
         widths.append(w)
         heights.append(h)
 
-    # Publish to the '/vision/red_areas' network table
-    table = NetworkTables.getTable('/vision/red_areas')
-    table.putNumberArray('x', center_x_positions)
-    table.putNumberArray('y', center_y_positions)
-    table.putNumberArray('width', widths)
-    table.putNumberArray('height', heights)
 
     # load white image and draw cone contours
     img = cv2.imread('img/blank.png')
@@ -58,10 +51,7 @@ def extra_processing_blue_mobile_goals(pipeline):
 
 
 def main():
-    print('Initializing NetworkTables')
-    NetworkTables.setClientMode()
-    NetworkTables.setIPAddress('localhost')
-    NetworkTables.initialize()
+   
 
     print('Creating video capture')
     cap = cv2.VideoCapture(1)
