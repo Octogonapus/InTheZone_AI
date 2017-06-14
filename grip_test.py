@@ -29,18 +29,30 @@ def extra_processing_cones(pipeline):
 
     # load white image and draw cone contours
     img = cv2.imread('img/blank.png')
-    cv2.drawContours(img, pipeline.filter_contours_output, -1, (0, 230, 230), 2)
+    cv2.drawContours(img, pipeline.filter_contours_output, -1, (0, 230, 230), cv2.FILLED)
     return img
 
 
 def extra_processing_red_mobile_goals(pipeline):
+    # transform grayscale to rgb
     out = cv2.cvtColor(pipeline.rgb_threshold_output, cv2.COLOR_GRAY2RGB)
+
+    # invert image so we color the goals
+    out = cv2.bitwise_not(out)
+
+    # make red channel 255
     out[:, :, 2] = 255
     return out
 
 
 def extra_processing_blue_mobile_goals(pipeline):
+    # transform grayscale to rgb
     out = cv2.cvtColor(pipeline.rgb_threshold_output, cv2.COLOR_GRAY2RGB)
+
+    # invert image so we color the goals
+    out = cv2.bitwise_not(out)
+
+    # make blue channel 255
     out[:, :, 0] = 255
     return out
 
