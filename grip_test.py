@@ -69,7 +69,7 @@ def main():
             images = [extra_processing_cones(cone_pipeline),
                       extra_processing_red_mobile_goals(red_mobile_goal_pipeline),
                       extra_processing_blue_mobile_goals(blue_mobile_goal_pipeline)]
-            cv2.imshow('Filters', np.column_stack(images))
+            cv2.imshow('Filters', np.vstack([np.hstack([frame, images[0]]), np.hstack(images[1:])]))
             cv2.waitKey(1)
             # for i in range(3):
             #     print(images[i].shape)
