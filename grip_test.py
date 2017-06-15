@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+from multiprocessing import Pool, TimeoutError
 from cone_pipeline import ConePipeline
 from red_mobile_goal_pipeline import RedMobileGoalPipeline
 from blue_mobile_goal_pipeline import BlueMobileGoalPipeline
@@ -110,28 +111,35 @@ def main():
     cap = cv2.VideoCapture(1)
 
     print('Creating pipelines')
+    # GRIP generated pipelines for cones and mobile goals
     cone_pipeline = ConePipeline()
     red_mobile_goal_pipeline = RedMobileGoalPipeline()
     blue_mobile_goal_pipeline = BlueMobileGoalPipeline()
+
+    # MOG2 static background subtractor for robot
+    fgbg = cv2.createBackgroundSubtractorMOG2()
 
     print('Running pipeline')
     while(True):
         have_frame, frame = grab_screen()
         if have_frame:
+            # GRIP frame processing
             cone_pipeline.process(frame)
             red_mobile_goal_pipeline.process(frame)
             blue_mobile_goal_pipeline.process(frame)
+
+            # Final processing (coloring, etc.)
             images = [extra_processing_cones(cone_pipeline),
                       extra_processing_red_mobile_goals(red_mobile_goal_pipeline),
                       extra_processing_blue_mobile_goals(blue_mobile_goal_pipeline)]
-            #cv2.imshow('frame',frame)
-            #cv2.imshow('frame1',images[0])
-            #cv2.imshow('frame2',images[1])
-            #cv2.imshow('frame3',images[2])
 
+            # MOG2 background remover
+            fgmask = fgbg.apply(frame)
+            fgmask = cv2.cvtColor(fgmask, cv2.COLOR_GRAY2RGB)
 
-            cv2.imshow('Filters', np.vstack([np.hstack([frame, images[1]]),
-                                          np.hstack(images[1:])]))
+            # Show all filters in 4x4 grid
+            cv2.imshow('Filters', np.vstack([np.hstack([fgmask, images[0]]),
+                                             np.hstack(images[1:3])]))
             cv2.waitKey(1)
 
     print('Capture closed')
