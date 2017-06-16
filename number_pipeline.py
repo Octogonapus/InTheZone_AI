@@ -13,15 +13,15 @@ class NumberPipeline:
         """initializes all values to presets or None if need to be set
         """
 
-        self.__rgb_threshold_0_red = [192.62589928057554, 231.0665529010239]
-        self.__rgb_threshold_0_green = [114.65827338129496, 139.6843003412969]
-        self.__rgb_threshold_0_blue = [139.88309352517985, 255.0]
+        self.__rgb_threshold_0_red = [170, 255]
+        self.__rgb_threshold_0_green = [67, 131]
+        self.__rgb_threshold_0_blue = [151, 255]
 
         self.rgb_threshold_0_output = None
 
-        self.__rgb_threshold_1_red = [96.31294964028777, 124.45392491467578]
-        self.__rgb_threshold_1_green = [174.28057553956833, 220.1877133105802]
-        self.__rgb_threshold_1_blue = [100.89928057553956, 128.80546075085323]
+        self.__rgb_threshold_1_red = [62, 98]
+        self.__rgb_threshold_1_green = [138, 209]
+        self.__rgb_threshold_1_blue = [94, 114]
 
         self.rgb_threshold_1_output = None
 
