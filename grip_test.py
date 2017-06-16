@@ -10,6 +10,8 @@ import win32ui
 from ctypes import windll
 
 toplist, winlist = [], []
+
+
 def enum_cb(hwnd, results):
     winlist.append((hwnd, win32gui.GetWindowText(hwnd)))
 
@@ -18,10 +20,11 @@ win32gui.EnumWindows(enum_cb, toplist)
 window = [(hwnd, title) for hwnd, title in winlist if 'rvw' in title.lower()]
 # just grab the hwnd for first window matching firefox
 window = window[0]
-print (window)
+print(window)
 hwnd = window[0]
 
 win32gui.SetForegroundWindow(hwnd)
+
 
 def grab_screen():
     left, top, right, bot = win32gui.GetClientRect(hwnd)
@@ -29,34 +32,34 @@ def grab_screen():
     h = bot - top
 
     hwndDC = win32gui.GetWindowDC(hwnd)
-    mfcDC  = win32ui.CreateDCFromHandle(hwndDC)
+    mfcDC = win32ui.CreateDCFromHandle(hwndDC)
     saveDC = mfcDC.CreateCompatibleDC()
 
     saveBitMap = win32ui.CreateBitmap()
     saveBitMap.CreateCompatibleBitmap(mfcDC, w, h)
 
     saveDC.SelectObject(saveBitMap)
- 
+
     result = windll.user32.PrintWindow(hwnd, saveDC.GetSafeHdc(), 1)
 
+    bmp_info = saveBitMap.GetInfo()
+    bmp_str = saveBitMap.GetBitmapBits(True)
 
-    bmpinfo = saveBitMap.GetInfo()
-    bmpstr = saveBitMap.GetBitmapBits(True)
-
-    im = Image.frombuffer(
-        'RGB',
-        (bmpinfo['bmWidth'], bmpinfo['bmHeight']),
-        bmpstr, 'raw', 'BGRX', 0, 1)
+    im = Image.frombuffer('RGB',
+                          (bmp_info['bmWidth'], bmp_info['bmHeight']),
+                          bmp_str, 'raw', 'BGRX', 0, 1)
 
     win32gui.DeleteObject(saveBitMap.GetHandle())
     saveDC.DeleteDC()
     mfcDC.DeleteDC()
     win32gui.ReleaseDC(hwnd, hwndDC)
 
-    opencvImage = cv2.cvtColor(np.array(im), cv2.COLOR_RGB2BGR)
+    opencv_image = cv2.cvtColor(np.array(im), cv2.COLOR_RGB2BGR)
 
-    return result,opencvImage
-    
+    return result, opencv_image
+
+
+blank_image = cv2.imread('img/blank.png')
 
 
 def extra_processing_cones(pipeline):
@@ -73,9 +76,8 @@ def extra_processing_cones(pipeline):
         widths.append(w)
         heights.append(h)
 
-
     # load white image and draw cone contours
-    img = cv2.imread('img/blank.png')
+    img = blank_image.copy()
     cv2.drawContours(img, pipeline.filter_contours_output, -1, (0, 230, 230), cv2.FILLED)
     return img
 
@@ -105,8 +107,6 @@ def extra_processing_blue_mobile_goals(pipeline):
 
 
 def main():
-   
-
     print('Creating video capture')
     cap = cv2.VideoCapture(1)
 
@@ -120,7 +120,7 @@ def main():
     fgbg = cv2.createBackgroundSubtractorMOG2()
 
     print('Running pipeline')
-    while(True):
+    while (True):
         have_frame, frame = grab_screen()
         if have_frame:
             # GRIP frame processing
@@ -128,23 +128,26 @@ def main():
             red_mobile_goal_pipeline.process(frame)
             blue_mobile_goal_pipeline.process(frame)
 
-            # Final processing (coloring, etc.)
-            images = [extra_processing_cones(cone_pipeline),
-                      extra_processing_red_mobile_goals(red_mobile_goal_pipeline),
-                      extra_processing_blue_mobile_goals(blue_mobile_goal_pipeline)]
-
             # MOG2 background remover
             fgmask = fgbg.apply(frame)
             fgmask = cv2.cvtColor(fgmask, cv2.COLOR_GRAY2RGB)
 
+            # Final processing (coloring, etc.)
+            images = [fgmask,
+                      extra_processing_cones(cone_pipeline),
+                      extra_processing_red_mobile_goals(red_mobile_goal_pipeline),
+                      extra_processing_blue_mobile_goals(blue_mobile_goal_pipeline)]
+
+            for i in range(4):
+                images[i] = cv2.resize(images[i], None, fx=0.6, fy=0.6, interpolation=cv2.INTER_AREA)
+
             # Show all filters in 4x4 grid
-            cv2.imshow('Filters', np.vstack([np.hstack([fgmask, images[0]]),
-                                             np.hstack(images[1:3])]))
+            cv2.imshow('Filters', np.vstack([np.hstack(images[0:2]),
+                                             np.hstack(images[2:4])]))
             cv2.waitKey(1)
 
     print('Capture closed')
     cv2.destroyAllWindows()
-
 
 
 if __name__ == '__main__':
