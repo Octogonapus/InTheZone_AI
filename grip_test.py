@@ -1,12 +1,14 @@
 import cv2
 import numpy as np
-from cone_pipeline import ConePipeline
-from red_mobile_goal_pipeline import RedMobileGoalPipeline
-from blue_mobile_goal_pipeline import BlueMobileGoalPipeline
 from PIL import Image
 import win32gui
 import win32ui
 from ctypes import windll
+from cone_pipeline import ConePipeline
+from red_mobile_goal_pipeline import RedMobileGoalPipeline
+from blue_mobile_goal_pipeline import BlueMobileGoalPipeline
+from number_pipeline import NumberPipeline
+import scipy
 
 top_list, win_list = [], []
 
@@ -19,7 +21,6 @@ win32gui.EnumWindows(enum_cb, top_list)
 window = [(hwnd, title) for hwnd, title in win_list if 'rvw' in title.lower()]
 # just grab the hwnd for first window matching firefox
 window = window[0]
-print(window)
 hwnd = window[0]
 win32gui.SetForegroundWindow(hwnd)
 hwndDC = win32gui.GetWindowDC(hwnd)
@@ -52,6 +53,11 @@ def grab_screen():
 
 
 blank_image = cv2.imread('img/blank.png')
+blank_image_scaled = cv2.resize(blank_image,
+                                None,
+                                fx=0.6,
+                                fy=0.6,
+                                interpolation=cv2.INTER_AREA)
 
 
 def extra_processing_cones(pipeline):
@@ -63,14 +69,19 @@ def extra_processing_cones(pipeline):
     # Find the bounding boxes of the contours to get x, y, width, and height
     for contour in pipeline.filter_contours_output:
         x, y, w, h = cv2.boundingRect(contour)
-        center_x_positions.append(x + w / 2)  # X and Y are coordinates of the top-left corner of the bounding box
+        # X and Y are coordinates of the top-left corner of the bounding box
+        center_x_positions.append(x + w / 2)
         center_y_positions.append(y + h / 2)
         widths.append(w)
         heights.append(h)
 
     # load white image and draw cone contours
     img = blank_image.copy()
-    cv2.drawContours(img, pipeline.filter_contours_output, -1, (0, 230, 230), cv2.FILLED)
+    cv2.drawContours(img,
+                     pipeline.filter_contours_output,
+                     -1,
+                     (0, 230, 230),
+                     cv2.FILLED)
     return img
 
 
@@ -98,12 +109,18 @@ def extra_processing_blue_mobile_goals(pipeline):
     return out
 
 
+def extra_processing_numbers(pipeline):
+    # transform grayscale to rgb
+    return cv2.cvtColor(pipeline.cv_bitwise_or_output, cv2.COLOR_GRAY2RGB)
+
+
 def main():
     print('Creating pipelines')
     # GRIP generated pipelines for cones and mobile goals
     cone_pipeline = ConePipeline()
-    red_mobile_goal_pipeline = RedMobileGoalPipeline()
-    blue_mobile_goal_pipeline = BlueMobileGoalPipeline()
+    rmg_pipeline = RedMobileGoalPipeline()
+    bmg_pipeline = BlueMobileGoalPipeline()
+    number_pipeline = NumberPipeline()
 
     print('Running pipeline')
     while True:
@@ -111,21 +128,25 @@ def main():
         if have_frame:
             # GRIP frame processing
             cone_pipeline.process(frame)
-            red_mobile_goal_pipeline.process(frame)
-            blue_mobile_goal_pipeline.process(frame)
+            rmg_pipeline.process(frame)
+            bmg_pipeline.process(frame)
+            number_pipeline.process(frame)
 
             # Final processing (coloring, etc.)
             images = [frame,
                       extra_processing_cones(cone_pipeline),
-                      extra_processing_red_mobile_goals(red_mobile_goal_pipeline),
-                      extra_processing_blue_mobile_goals(blue_mobile_goal_pipeline)]
+                      extra_processing_red_mobile_goals(rmg_pipeline),
+                      extra_processing_blue_mobile_goals(bmg_pipeline),
+                      extra_processing_numbers(number_pipeline)]
 
-            for i in range(4):
+            for i in range(len(images)):
                 images[i] = cv2.resize(images[i], None, fx=0.6, fy=0.6, interpolation=cv2.INTER_AREA)
 
             # Show all filters in 4x4 grid
-            cv2.imshow('Filters', np.vstack([np.hstack(images[0:2]),
-                                             np.hstack(images[2:4])]))
+            cv2.imshow('Filters', np.hstack([np.vstack([np.hstack(images[0:2]),
+                                                        np.hstack(images[2:4])]),
+                                             np.vstack([images[4],
+                                                        blank_image_scaled])]))
             cv2.waitKey(1)
 
     # print('Capture closed')
