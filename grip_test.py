@@ -8,7 +8,7 @@ from cone_pipeline import ConePipeline
 from red_mobile_goal_pipeline import RedMobileGoalPipeline
 from blue_mobile_goal_pipeline import BlueMobileGoalPipeline
 from number_pipeline import NumberPipeline
-import scipy
+import pytesseract
 
 top_list, win_list = [], []
 
@@ -110,6 +110,9 @@ def extra_processing_blue_mobile_goals(pipeline):
 
 
 def extra_processing_numbers(pipeline):
+    # OCR
+    print(pytesseract.image_to_string(pipeline.cv_bitwise_or_output))
+
     # transform grayscale to rgb
     return cv2.cvtColor(pipeline.cv_bitwise_or_output, cv2.COLOR_GRAY2RGB)
 
