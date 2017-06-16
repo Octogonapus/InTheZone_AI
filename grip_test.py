@@ -1,6 +1,5 @@
 import cv2
 import numpy as np
-from multiprocessing import Pool, TimeoutError
 from cone_pipeline import ConePipeline
 from red_mobile_goal_pipeline import RedMobileGoalPipeline
 from blue_mobile_goal_pipeline import BlueMobileGoalPipeline
@@ -9,21 +8,24 @@ import win32gui
 import win32ui
 from ctypes import windll
 
-toplist, winlist = [], []
+top_list, win_list = [], []
 
 
 def enum_cb(hwnd, results):
-    winlist.append((hwnd, win32gui.GetWindowText(hwnd)))
+    win_list.append((hwnd, win32gui.GetWindowText(hwnd)))
 
 
-win32gui.EnumWindows(enum_cb, toplist)
-window = [(hwnd, title) for hwnd, title in winlist if 'rvw' in title.lower()]
+win32gui.EnumWindows(enum_cb, top_list)
+window = [(hwnd, title) for hwnd, title in win_list if 'rvw' in title.lower()]
 # just grab the hwnd for first window matching firefox
 window = window[0]
 print(window)
 hwnd = window[0]
-
 win32gui.SetForegroundWindow(hwnd)
+hwndDC = win32gui.GetWindowDC(hwnd)
+mfcDC = win32ui.CreateDCFromHandle(hwndDC)
+saveDC = mfcDC.CreateCompatibleDC()
+saveBitMap = win32ui.CreateBitmap()
 
 
 def grab_screen():
@@ -31,11 +33,6 @@ def grab_screen():
     w = right - left
     h = bot - top
 
-    hwndDC = win32gui.GetWindowDC(hwnd)
-    mfcDC = win32ui.CreateDCFromHandle(hwndDC)
-    saveDC = mfcDC.CreateCompatibleDC()
-
-    saveBitMap = win32ui.CreateBitmap()
     saveBitMap.CreateCompatibleBitmap(mfcDC, w, h)
 
     saveDC.SelectObject(saveBitMap)
@@ -48,11 +45,6 @@ def grab_screen():
     im = Image.frombuffer('RGB',
                           (bmp_info['bmWidth'], bmp_info['bmHeight']),
                           bmp_str, 'raw', 'BGRX', 0, 1)
-
-    win32gui.DeleteObject(saveBitMap.GetHandle())
-    saveDC.DeleteDC()
-    mfcDC.DeleteDC()
-    win32gui.ReleaseDC(hwnd, hwndDC)
 
     opencv_image = cv2.cvtColor(np.array(im), cv2.COLOR_RGB2BGR)
 
@@ -107,20 +99,14 @@ def extra_processing_blue_mobile_goals(pipeline):
 
 
 def main():
-    print('Creating video capture')
-    cap = cv2.VideoCapture(1)
-
     print('Creating pipelines')
     # GRIP generated pipelines for cones and mobile goals
     cone_pipeline = ConePipeline()
     red_mobile_goal_pipeline = RedMobileGoalPipeline()
     blue_mobile_goal_pipeline = BlueMobileGoalPipeline()
 
-    # MOG2 static background subtractor for robot
-    fgbg = cv2.createBackgroundSubtractorMOG2()
-
     print('Running pipeline')
-    while (True):
+    while True:
         have_frame, frame = grab_screen()
         if have_frame:
             # GRIP frame processing
@@ -128,12 +114,8 @@ def main():
             red_mobile_goal_pipeline.process(frame)
             blue_mobile_goal_pipeline.process(frame)
 
-            # MOG2 background remover
-            fgmask = fgbg.apply(frame)
-            fgmask = cv2.cvtColor(fgmask, cv2.COLOR_GRAY2RGB)
-
             # Final processing (coloring, etc.)
-            images = [fgmask,
+            images = [frame,
                       extra_processing_cones(cone_pipeline),
                       extra_processing_red_mobile_goals(red_mobile_goal_pipeline),
                       extra_processing_blue_mobile_goals(blue_mobile_goal_pipeline)]
@@ -146,8 +128,12 @@ def main():
                                              np.hstack(images[2:4])]))
             cv2.waitKey(1)
 
-    print('Capture closed')
-    cv2.destroyAllWindows()
+    # print('Capture closed')
+    # cv2.destroyAllWindows()
+    # win32gui.DeleteObject(saveBitMap.GetHandle())
+    # saveDC.DeleteDC()
+    # mfcDC.DeleteDC()
+    # win32gui.ReleaseDC(hwnd, hwndDC)
 
 
 if __name__ == '__main__':
