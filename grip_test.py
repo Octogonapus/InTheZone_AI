@@ -8,7 +8,7 @@ from cone_pipeline import ConePipeline
 from red_mobile_goal_pipeline import RedMobileGoalPipeline
 from blue_mobile_goal_pipeline import BlueMobileGoalPipeline
 from number_pipeline import NumberPipeline
-import pytesseract
+from heap_scanner import read_memory
 
 top_list, win_list = [], []
 
@@ -109,15 +109,40 @@ def extra_processing_blue_mobile_goals(pipeline):
     return out
 
 
+number_template_names = ['img/number_pattern/zero.png',
+                         'img/number_pattern/one.png',
+                         'img/number_pattern/two.png',
+                         'img/number_pattern/three.png',
+                         'img/number_pattern/four.png',
+                         'img/number_pattern/five.png',
+                         'img/number_pattern/six.png',
+                         'img/number_pattern/seven.png',
+                         'img/number_pattern/eight.png',
+                         'img/number_pattern/nine.png']
+number_templates = [cv2.cvtColor(cv2.imread(file), cv2.COLOR_RGB2GRAY) for file in number_template_names]
+num_temp_dims = [temp.shape for temp in number_templates]
+
+
 def extra_processing_numbers(pipeline):
-    # OCR
-    print(pytesseract.image_to_string(pipeline.cv_bitwise_or_output))
+    # Scale image for easier OCR
+    image = pipeline.cv_bitwise_or_output.copy()
+    # scaled_source = cv2.resize(pipeline.cv_bitwise_or_output, None, fx=5, fy=5, interpolation=cv2.INTER_LINEAR)
+
+    # Pattern matching
+    for i in range(len(number_templates)):
+        match = cv2.matchTemplate(pipeline.cv_bitwise_or_output, number_templates[i], cv2.TM_CCOEFF)
+        min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(match)
+        top_left = max_loc
+        bottom_right = (top_left[0] + num_temp_dims[i][0], top_left[1] + num_temp_dims[i][1])
+        cv2.rectangle(image, top_left, bottom_right, 255, 2)
 
     # transform grayscale to rgb
-    return cv2.cvtColor(pipeline.cv_bitwise_or_output, cv2.COLOR_GRAY2RGB)
+    return cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
 
 
 def main():
+    read_memory()
+
     print('Creating pipelines')
     # GRIP generated pipelines for cones and mobile goals
     cone_pipeline = ConePipeline()
@@ -152,12 +177,12 @@ def main():
                                                         blank_image_scaled])]))
             cv2.waitKey(1)
 
-    # print('Capture closed')
-    # cv2.destroyAllWindows()
-    # win32gui.DeleteObject(saveBitMap.GetHandle())
-    # saveDC.DeleteDC()
-    # mfcDC.DeleteDC()
-    # win32gui.ReleaseDC(hwnd, hwndDC)
+            # print('Capture closed')
+            # cv2.destroyAllWindows()
+            # win32gui.DeleteObject(saveBitMap.GetHandle())
+            # saveDC.DeleteDC()
+            # mfcDC.DeleteDC()
+            # win32gui.ReleaseDC(hwnd, hwndDC)
 
 
 if __name__ == '__main__':

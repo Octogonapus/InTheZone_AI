@@ -13,7 +13,7 @@ class NumberPipeline:
         """initializes all values to presets or None if need to be set
         """
 
-        self.__rgb_threshold_0_red = [170, 255]
+        self.__rgb_threshold_0_red = [132, 255]
         self.__rgb_threshold_0_green = [67, 131]
         self.__rgb_threshold_0_blue = [151, 255]
 
