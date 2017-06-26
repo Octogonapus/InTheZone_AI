@@ -1,0 +1,1 @@
+g++ -std=c++14 -Ofast -march=native -c -fPIC mem_scanner.cpp -o mem_scanner.o
