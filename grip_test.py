@@ -8,7 +8,7 @@ from cone_pipeline import ConePipeline
 from red_mobile_goal_pipeline import RedMobileGoalPipeline
 from blue_mobile_goal_pipeline import BlueMobileGoalPipeline
 from number_pipeline import NumberPipeline
-from heap_scanner import scan_memory
+from heap_scanner import HeapScanner
 
 top_list, win_list = [], []
 
@@ -141,8 +141,12 @@ def extra_processing_numbers(pipeline):
 
 
 def main():
-    scan_memory("1.82 m")
-    scan_memory("-26.26")
+    print("Scanning Memory")
+    scanner = HeapScanner(0x033AE9D4)
+    wp1d_addr = scanner.scan_memory("2.1 m")
+    wp1a_addr = scanner.scan_memory("-54.91")
+    wp2d_addr = scanner.scan_memory("3.7 m")
+    wp2a_addr = scanner.scan_memory("+99.4")
 
     print('Creating pipelines')
     # GRIP generated pipelines for cones and mobile goals
