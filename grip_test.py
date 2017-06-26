@@ -142,11 +142,11 @@ def extra_processing_numbers(pipeline):
 
 def main():
     print("Scanning Memory")
-    scanner = HeapScanner(0x033AE9D4)
-    wp1d_addr = scanner.scan_memory("2.1 m")
-    wp1a_addr = scanner.scan_memory("-54.91")
-    wp2d_addr = scanner.scan_memory("3.7 m")
-    wp2a_addr = scanner.scan_memory("+99.4")
+    scanner = HeapScanner(0x033A0000)
+    wp1d_addr = scanner.scan_memory("2.11 m")
+    wp1a_addr = scanner.scan_memory("-54.84")
+    wp2d_addr = scanner.scan_memory("3.69 m")
+    wp2a_addr = scanner.scan_memory("+99.68")
 
     print('Creating pipelines')
     # GRIP generated pipelines for cones and mobile goals
@@ -175,6 +175,11 @@ def main():
             for i in range(len(images)):
                 images[i] = cv2.resize(images[i], None, fx=0.6, fy=0.6, interpolation=cv2.INTER_AREA)
 
+            read = scanner.read_memory(wp1d_addr, 4)
+            print(num_from_distance_string(read))
+            # print(read)
+            # print([int(s) for s in read.split() if s.isdigit()])
+
             # Show all filters in 4x4 grid
             cv2.imshow('Filters', np.hstack([np.vstack([np.hstack(images[0:2]),
                                                         np.hstack(images[2:4])]),
@@ -188,6 +193,18 @@ def main():
             # saveDC.DeleteDC()
             # mfcDC.DeleteDC()
             # win32gui.ReleaseDC(hwnd, hwndDC)
+
+
+def num_from_distance_string(text):
+    if text.endswith(" "):
+        if len(text) == 1:
+            return int(text[0])
+        else:
+            return float(text[0:3])
+    elif text.endswith("m"):
+        return float(text[0:3])
+    else:
+        return float(text)
 
 
 if __name__ == '__main__':

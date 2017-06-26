@@ -5,8 +5,16 @@ import ctypes
 
 class HeapScanner(object):
     def __init__(self, base=0x00000000):
-        self.byte_shifts = [0, 8, 16, 24, 36, 48, 60]
+        self.byte_shifts = [0]
         self.base = base
+
+        PID = self.get_pid('inthezone.exe')
+        PROCESS_QUERY_INFORMATION = 0x0400
+        PROCESS_VM_READ = 0x0010
+        self.process = windll.kernel32.OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, False, PID)
+        self.readprocess = windll.kernel32.ReadProcessMemory
+        self.rdbuf = c_ubyte()
+        self.byteread = c_ulong(0)
 
     @staticmethod
     def get_pid(name):
@@ -23,38 +31,50 @@ class HeapScanner(object):
         print("Bytes: ", mem_bytes)
         print("As string[4]: ", "".join(map(chr, mem_bytes)))
 
+    def read_memory(self, address, length):
+        addr = address
+        counter = 0
+        mem_bytes = [0] * length
+
+        while counter < length:
+            try:
+                if self.readprocess(self.process,
+                                    ctypes.c_void_p(addr),
+                                    ctypes.byref(self.rdbuf),
+                                    ctypes.sizeof(self.rdbuf),
+                                    ctypes.byref(self.byteread)):
+                    mem_bytes[counter % length] = self.rdbuf.value
+
+                addr += 1
+                counter += 1
+            except Exception:
+                print("Failure! Last addr: ", hex(address))
+
+        result = [""] * length
+        for i in range(0, length):
+            result[i] = self.string6_from_uint(mem_bytes[i])
+        return "".join(map(chr, mem_bytes))
+
     def scan_memory(self, text):
         text_sorted = sorted(text)
-        PID = self.get_pid('inthezone.exe')
-        PROCESS_QUERY_INFORMATION = 0x0400
-        PROCESS_VM_READ = 0x0010
-
-        process = windll.kernel32.OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, False, PID)
-        readprocess = windll.kernel32.ReadProcessMemory
-        rdbuf = c_ubyte()
-        bytread = c_ulong(0)
-
-        addr = self.base
         counter = 0
         substring_length = len(text)
         mem_bytes = [0] * substring_length
+
         while True:
             try:
-                if readprocess(process,
-                               ctypes.c_void_p(addr),
-                               ctypes.byref(rdbuf),
-                               ctypes.sizeof(rdbuf),
-                               ctypes.byref(bytread)):
-                    mem_bytes[counter % substring_length] = rdbuf.value
+                if self.readprocess(self.process,
+                                    ctypes.c_void_p(self.base),
+                                    ctypes.byref(self.rdbuf),
+                                    ctypes.sizeof(self.rdbuf),
+                                    ctypes.byref(self.byteread)):
+                    mem_bytes[counter % substring_length] = self.rdbuf.value
                     if text_sorted == sorted("".join(map(chr, mem_bytes))):
-                        print("Found", text, "at address", hex(addr))
-                        return addr
+                        print("Found", text, "at address", hex(self.base))
+                        return self.base - substring_length + 1
 
-                # if addr % 100000 == 0:
-                #     print("Progress: ", hex(addr))
-
-                addr = addr + 1
-                counter = counter + 1
+                self.base += 1
+                counter += 1
             except Exception:
-                print("Failure! Last addr: ", hex(addr))
+                print("Failure! Last addr: ", hex(self.base))
                 break
