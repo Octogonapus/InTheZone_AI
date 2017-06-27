@@ -3,6 +3,9 @@ import numpy as np
 from PIL import Image
 import win32gui
 import win32ui
+import win32api
+import win32con
+import time
 from ctypes import windll
 from cone_pipeline import ConePipeline
 from red_mobile_goal_pipeline import RedMobileGoalPipeline
@@ -17,6 +20,12 @@ def enum_cb(hwnd, results):
     win_list.append((hwnd, win32gui.GetWindowText(hwnd)))
 
 
+def click(x, y):
+    win32api.SetCursorPos((x, y))
+    win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, x, y, 0, 0)
+    win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, x, y, 0, 0)
+
+
 win32gui.EnumWindows(enum_cb, top_list)
 window = [(hwnd, title) for hwnd, title in win_list if 'rvw' in title.lower()]
 # just grab the hwnd for first window matching firefox
@@ -27,6 +36,20 @@ hwndDC = win32gui.GetWindowDC(hwnd)
 mfcDC = win32ui.CreateDCFromHandle(hwndDC)
 saveDC = mfcDC.CreateCompatibleDC()
 saveBitMap = win32ui.CreateBitmap()
+
+time.sleep(0.75)  # Sleep to wait for window to be in foreground
+
+
+def place_waypoints():
+    click(1260, 567)  # First waypoint
+    time.sleep(0.35)  # Wait for virtual worlds to handle input
+    click(1764, 567)  # Second waypoint
+
+
+def reset_robot():
+    click(1170, 1013)  # Press restart
+    time.sleep(0.35)  # Wait for virtual worlds to handle input
+    click(1775, 1013)  # Press camera angle 2
 
 
 def grab_screen():
@@ -141,12 +164,12 @@ def extra_processing_numbers(pipeline):
 
 
 def main():
+    # place_waypoints()
     print("Scanning Memory")
-    scanner = HeapScanner(0x03340000)
-    wp1d_addr = scanner.scan_memory("2.11 m")
-    wp1a_addr = scanner.scan_memory("-54.84")
-    wp2d_addr = scanner.scan_memory("3.69 m")
-    wp2a_addr = scanner.scan_memory("+99.68")
+    scanner = HeapScanner(0x03650000)
+    wp1d_addr = scanner.scan_memory("2.1 m")
+    wp1a_addr = scanner.scan_memory("-54.91")
+    wp2a_addr = scanner.scan_memory("+99.91")
 
     print('Creating pipelines')
     # GRIP generated pipelines for cones and mobile goals
@@ -176,10 +199,6 @@ def main():
                 images[i] = cv2.resize(images[i], None, fx=0.6, fy=0.6, interpolation=cv2.INTER_AREA)
 
             read = scanner.read_memory(wp1a_addr, 6)
-            # print(num_from_distance_string(read))
-            print(num_from_angle_string(read))
-            # print(read)
-            # print([int(s) for s in read.split() if s.isdigit()])
 
             # Show all filters in 4x4 grid
             cv2.imshow('Filters', np.hstack([np.vstack([np.hstack(images[0:2]),
@@ -230,10 +249,10 @@ def num_from_angle_string(text):
         try:
             if text.startswith("-"):
                 _last_sign = -1
-                return -1 * float(text[1:len(text)-1])
+                return -1 * float(text[1:len(text) - 1])
             elif text.startswith("+"):
                 _last_sign = 1
-                return float(text[1:len(text)-1])
+                return float(text[1:len(text) - 1])
         except ValueError:
             print("num_from_angle_string error: ", text)
 
