@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+from mpmath import *
 from PIL import Image
 import win32gui
 import win32ui
@@ -166,7 +167,7 @@ def extra_processing_numbers(pipeline):
 def main():
     # place_waypoints()
     print("Scanning Memory")
-    scanner = HeapScanner(0x03650000)
+    scanner = HeapScanner(0x03340000)
     wp1d_addr = scanner.scan_memory("2.1 m")
     wp1a_addr = scanner.scan_memory("-54.91")
     wp2a_addr = scanner.scan_memory("+99.91")
@@ -198,7 +199,16 @@ def main():
             for i in range(len(images)):
                 images[i] = cv2.resize(images[i], None, fx=0.6, fy=0.6, interpolation=cv2.INTER_AREA)
 
-            read = scanner.read_memory(wp1a_addr, 6)
+            r = num_from_distance_string(scanner.read_memory(wp1d_addr, 6))
+            theta = num_from_angle_string(scanner.read_memory(wp2a_addr, 6))
+            if r is not None and theta is not None:
+                theta = radians(theta)
+                x = r * fabs(mp.cos(theta))
+                y = x * mp.tan(theta)
+                print("x:", x, "y:", y)
+                print(r, theta)
+            else:
+                print("none :(")
 
             # Show all filters in 4x4 grid
             cv2.imshow('Filters', np.hstack([np.vstack([np.hstack(images[0:2]),

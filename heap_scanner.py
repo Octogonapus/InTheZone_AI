@@ -61,20 +61,21 @@ class HeapScanner(object):
         substring_length = len(text)
         mem_bytes = [0] * substring_length
 
+        addr = self.base
         while True:
             try:
                 if self.readprocess(self.process,
-                                    ctypes.c_void_p(self.base),
+                                    ctypes.c_void_p(addr),
                                     ctypes.byref(self.rdbuf),
                                     ctypes.sizeof(self.rdbuf),
                                     ctypes.byref(self.byteread)):
                     mem_bytes[counter % substring_length] = self.rdbuf.value
                     if text_sorted == sorted("".join(map(chr, mem_bytes))):
-                        print("Found", text, "at address", hex(self.base))
-                        return self.base - substring_length + 1
+                        print("Found", text, "at address", hex(addr))
+                        return addr - substring_length + 1
 
-                self.base += 1
+                addr += 1
                 counter += 1
             except Exception:
-                print("Failure! Last addr: ", hex(self.base))
+                print("Failure! Last addr: ", hex(addr))
                 break
