@@ -142,7 +142,7 @@ def extra_processing_numbers(pipeline):
 
 def main():
     print("Scanning Memory")
-    scanner = HeapScanner(0x033A0000)
+    scanner = HeapScanner(0x03340000)
     wp1d_addr = scanner.scan_memory("2.11 m")
     wp1a_addr = scanner.scan_memory("-54.84")
     wp2d_addr = scanner.scan_memory("3.69 m")
@@ -175,8 +175,9 @@ def main():
             for i in range(len(images)):
                 images[i] = cv2.resize(images[i], None, fx=0.6, fy=0.6, interpolation=cv2.INTER_AREA)
 
-            read = scanner.read_memory(wp1d_addr, 4)
-            print(num_from_distance_string(read))
+            read = scanner.read_memory(wp1a_addr, 6)
+            # print(num_from_distance_string(read))
+            print(num_from_angle_string(read))
             # print(read)
             # print([int(s) for s in read.split() if s.isdigit()])
 
@@ -196,15 +197,45 @@ def main():
 
 
 def num_from_distance_string(text):
-    if text.endswith(" "):
-        if len(text) == 1:
-            return int(text[0])
-        else:
+    try:
+        if text.endswith(" "):
+            if len(text) == 1:
+                return int(text[0])
+            else:
+                return float(text[0:3])
+        elif text.endswith("m"):
             return float(text[0:3])
-    elif text.endswith("m"):
-        return float(text[0:3])
-    else:
-        return float(text)
+        else:
+            return float(text)
+    except ValueError:
+        print("num_from_distance_string error: ", text)
+
+
+_last_sign = 1
+
+
+def num_from_angle_string(text):
+    global _last_sign
+
+    try:
+        if text.startswith("-"):
+            _last_sign = -1
+            return -1 * float(text[1:])
+        elif text.startswith("+"):
+            _last_sign = 1
+            return float(text[1:])
+        else:
+            return _last_sign * float(text[1:])
+    except ValueError:
+        try:
+            if text.startswith("-"):
+                _last_sign = -1
+                return -1 * float(text[1:len(text)-1])
+            elif text.startswith("+"):
+                _last_sign = 1
+                return float(text[1:len(text)-1])
+        except ValueError:
+            print("num_from_angle_string error: ", text)
 
 
 if __name__ == '__main__':
