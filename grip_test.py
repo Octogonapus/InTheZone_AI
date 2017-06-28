@@ -1,4 +1,5 @@
 import cv2
+from vjoy import vj, set_joy
 import numpy as np
 from mpmath import *
 from PIL import Image
@@ -165,6 +166,10 @@ def extra_processing_numbers(pipeline):
 
 
 def main():
+    print("vJoy Opening")
+    vj.open()
+    time.sleep(0.5)
+
     # place_waypoints()
     print("Scanning Memory")
     scanner = HeapScanner(0x03340000)
@@ -201,28 +206,33 @@ def main():
 
             r = num_from_distance_string(scanner.read_memory(wp1d_addr, 6))
             theta = num_from_angle_string(scanner.read_memory(wp2a_addr, 6))
-            if r is not None and theta is not None:
+            wp1_t = num_from_angle_string(scanner.read_memory(wp1a_addr, 6))
+            if r is not None and theta is not None and wp1_t is not None:
                 theta = radians(theta)
                 x = r * fabs(mp.cos(theta))
                 y = x * mp.tan(theta)
-                print("x:", x, "y:", y)
+                print("x:", x, "y:", y, "t:", mp.atan2(y, x) - wp1_t)
                 print(r, theta)
             else:
                 print("none :(")
+
+            # To write to joystick call set_joy
+            # set_joy(xval, yval)
 
             # Show all filters in 4x4 grid
             cv2.imshow('Filters', np.hstack([np.vstack([np.hstack(images[0:2]),
                                                         np.hstack(images[2:4])]),
                                              np.vstack([images[4],
                                                         blank_image_scaled])]))
-            cv2.waitKey(1)
-
-            # print('Capture closed')
-            # cv2.destroyAllWindows()
-            # win32gui.DeleteObject(saveBitMap.GetHandle())
-            # saveDC.DeleteDC()
-            # mfcDC.DeleteDC()
-            # win32gui.ReleaseDC(hwnd, hwndDC)
+            if cv2.waitKey(10) == 27:
+                print('Capture closed')
+                cv2.destroyAllWindows()
+                win32gui.DeleteObject(saveBitMap.GetHandle())
+                saveDC.DeleteDC()
+                mfcDC.DeleteDC()
+                win32gui.ReleaseDC(hwnd, hwndDC)
+                vj.close()
+                return
 
 
 def num_from_distance_string(text):
