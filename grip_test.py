@@ -52,6 +52,9 @@ def extra_processing_red_mobile_goals(pipeline):
     # invert image so we color the goals
     out = cv2.bitwise_not(out)
 
+    # detect blobs
+
+
     # make red channel 255
     out[:, :, 2] = 255
     return out
@@ -106,8 +109,9 @@ def main():
     time.sleep(0.5)
 
     # place_waypoints()
+
     print("Scanning Memory")
-    scanner = HeapScanner(0x03340000)
+    scanner = HeapScanner(0x03600000)
     wp1d_addr = scanner.scan_memory("2.1 m")
     wp1a_addr = scanner.scan_memory("-54.91")
     wp2a_addr = scanner.scan_memory("+99.91")
