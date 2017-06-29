@@ -77,21 +77,42 @@ def extra_processing_red_mobile_goals(pipeline):
     img = cv2.drawKeypoints(pipeline.rgb_threshold_output, blobs, img,
                             (0, 0, 255), cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
 
-    # make red channel 255
-    # out[:, :, 2] = 255
     return img
 
 
 def extra_processing_blue_mobile_goals(pipeline):
-    # transform grayscale to rgb
-    out = cv2.cvtColor(pipeline.rgb_threshold_output, cv2.COLOR_GRAY2RGB)
+    # blob detection
+    params = cv2.SimpleBlobDetector_Params()
+    params.filterByColor = 1
+    params.blobColor = 255
+    params.minThreshold = 10
+    params.maxThreshold = 220
+    params.filterByArea = True
+    params.minArea = 190
+    params.filterByCircularity = True
+    params.minCircularity = 0.25
+    params.maxCircularity = 10000.0
+    params.filterByConvexity = False
+    params.filterByInertia = False
+    detector = cv2.SimpleBlobDetector_create(params)
 
-    # invert image so we color the goals
-    out = cv2.bitwise_not(out)
+    # filter blobs by position
+    blobs = detector.detect(cv2.medianBlur(pipeline.rgb_threshold_output, 3))
+    for blob in reversed(blobs):  # do it in reverse because we are removing elements as we iterate
+        coord = blob.pt
+        if coord[0] > 730 and coord[1] < 25:
+            # blob is top right box
+            blobs.remove(blob)
+        elif coord[0] < 70 and coord[1] > 560:
+            # blob is bottom left box
+            blobs.remove(blob)
 
-    # make blue channel 255
-    out[:, :, 0] = 255
-    return out
+    # draw blobs
+    img = blank_image.copy()
+    img = cv2.drawKeypoints(pipeline.rgb_threshold_output, blobs, img,
+                            (255, 0, 0), cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+
+    return img
 
 
 number_template_names = ['img/number_pattern/zero.png',
