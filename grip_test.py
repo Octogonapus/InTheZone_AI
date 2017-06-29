@@ -1,81 +1,16 @@
-import cv2
 from vjoy import vj, set_joy
-import numpy as np
 from mpmath import *
-from PIL import Image
-import win32gui
-import win32ui
-import win32api
-import win32con
+import cv2
+import numpy as np
 import time
-from ctypes import windll
+
 from cone_pipeline import ConePipeline
 from red_mobile_goal_pipeline import RedMobileGoalPipeline
 from blue_mobile_goal_pipeline import BlueMobileGoalPipeline
 from number_pipeline import NumberPipeline
+
 from heap_scanner import HeapScanner
-
-top_list, win_list = [], []
-
-
-def enum_cb(hwnd, results):
-    win_list.append((hwnd, win32gui.GetWindowText(hwnd)))
-
-
-def click(x, y):
-    win32api.SetCursorPos((x, y))
-    win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, x, y, 0, 0)
-    win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, x, y, 0, 0)
-
-
-win32gui.EnumWindows(enum_cb, top_list)
-window = [(hwnd, title) for hwnd, title in win_list if 'rvw' in title.lower()]
-# just grab the hwnd for first window matching firefox
-window = window[0]
-hwnd = window[0]
-win32gui.SetForegroundWindow(hwnd)
-hwndDC = win32gui.GetWindowDC(hwnd)
-mfcDC = win32ui.CreateDCFromHandle(hwndDC)
-saveDC = mfcDC.CreateCompatibleDC()
-saveBitMap = win32ui.CreateBitmap()
-
-time.sleep(0.75)  # Sleep to wait for window to be in foreground
-
-
-def place_waypoints():
-    click(1260, 567)  # First waypoint
-    time.sleep(0.35)  # Wait for virtual worlds to handle input
-    click(1764, 567)  # Second waypoint
-
-
-def reset_robot():
-    click(1170, 1013)  # Press restart
-    time.sleep(0.35)  # Wait for virtual worlds to handle input
-    click(1775, 1013)  # Press camera angle 2
-
-
-def grab_screen():
-    left, top, right, bot = win32gui.GetClientRect(hwnd)
-    w = right - left
-    h = bot - top
-
-    saveBitMap.CreateCompatibleBitmap(mfcDC, w, h)
-
-    saveDC.SelectObject(saveBitMap)
-
-    result = windll.user32.PrintWindow(hwnd, saveDC.GetSafeHdc(), 1)
-
-    bmp_info = saveBitMap.GetInfo()
-    bmp_str = saveBitMap.GetBitmapBits(True)
-
-    im = Image.frombuffer('RGB',
-                          (bmp_info['bmWidth'], bmp_info['bmHeight']),
-                          bmp_str, 'raw', 'BGRX', 0, 1)
-
-    opencv_image = cv2.cvtColor(np.array(im), cv2.COLOR_RGB2BGR)
-
-    return result, opencv_image
-
+from gui_helper import click, place_waypoints, reset_robot, grab_screen, cleanup_gui_helper
 
 blank_image = cv2.imread('img/blank.png')
 blank_image_scaled = cv2.resize(blank_image,
@@ -227,10 +162,7 @@ def main():
             if cv2.waitKey(10) == 27:
                 print('Capture closed')
                 cv2.destroyAllWindows()
-                win32gui.DeleteObject(saveBitMap.GetHandle())
-                saveDC.DeleteDC()
-                mfcDC.DeleteDC()
-                win32gui.ReleaseDC(hwnd, hwndDC)
+                cleanup_gui_helper()
                 vj.close()
                 return
 
