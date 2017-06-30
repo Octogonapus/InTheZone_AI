@@ -3,12 +3,11 @@ from mpmath import *
 import cv2
 import numpy as np
 import time
+from numba import jit
 
 from cone_pipeline import ConePipeline
 from red_mobile_goal_pipeline import RedMobileGoalPipeline
 from blue_mobile_goal_pipeline import BlueMobileGoalPipeline
-from number_pipeline import NumberPipeline
-
 from heap_scanner import HeapScanner
 from gui_helper import click, place_waypoints, reset_robot, grab_screen, cleanup_gui_helper, start_stop_program
 
@@ -123,7 +122,7 @@ def main():
     # place_waypoints()
 
     print("Scanning Memory")
-    scanner = HeapScanner(0x03600000)
+    scanner = HeapScanner(0x034B0000)
     wp1d_addr = scanner.scan_memory("2.1 m")
     wp1a_addr = scanner.scan_memory("-54.91")
     wp2a_addr = scanner.scan_memory("+99.91")
@@ -133,9 +132,9 @@ def main():
     cone_pipeline = ConePipeline()
     rmg_pipeline = RedMobileGoalPipeline()
     bmg_pipeline = BlueMobileGoalPipeline()
-    number_pipeline = NumberPipeline()
 
     print('Running pipeline')
+    last_time = time.time()
     while True:
         have_frame, frame = grab_screen()
         if have_frame:
@@ -143,7 +142,6 @@ def main():
             cone_pipeline.process(frame)
             rmg_pipeline.process(frame)
             bmg_pipeline.process(frame)
-            number_pipeline.process(frame)
 
             # Final processing (coloring, etc.)
             images = [frame,
@@ -162,10 +160,6 @@ def main():
                 theta = radians(theta)
                 x = r * fabs(mp.cos(theta))
                 y = x * mp.tan(theta)
-                print("x:", x, "y:", y, "t:", mp.atan2(y, x) - wp1_t)
-                print(r, theta)
-            else:
-                print("none :(")
 
             # To write to joystick call set_joy
             # set_joy(xval, yval)
@@ -181,6 +175,9 @@ def main():
                 cleanup_gui_helper()
                 vj.close()
                 return
+            else:
+                print("fps: ", int(1 / (time.time() - last_time)))
+                last_time = time.time()
 
 
 def num_from_distance_string(text):
