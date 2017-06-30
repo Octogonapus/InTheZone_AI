@@ -10,7 +10,7 @@ from blue_mobile_goal_pipeline import BlueMobileGoalPipeline
 from number_pipeline import NumberPipeline
 
 from heap_scanner import HeapScanner
-from gui_helper import click, place_waypoints, reset_robot, grab_screen, cleanup_gui_helper
+from gui_helper import click, place_waypoints, reset_robot, grab_screen, cleanup_gui_helper, start_stop_program
 
 blank_image = cv2.imread('img/blank.png')
 blank_image_scaled = cv2.resize(blank_image,

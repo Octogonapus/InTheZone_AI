@@ -47,6 +47,10 @@ def reset_robot():
     click(1775, 1013)  # Press camera angle 2
 
 
+def start_stop_program():
+    click(1135, 1013)
+
+
 def grab_screen():
     left, top, right, bot = win32gui.GetClientRect(hwnd)
     w = right - left
